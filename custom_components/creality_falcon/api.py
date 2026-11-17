@@ -29,7 +29,12 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 _TIMEOUT = aiohttp.ClientTimeout(total=8)
+# Befehle wie Autofokus/Referenzfahrt antworten erst nach der Bewegung
+_COMMAND_TIMEOUT = aiohttp.ClientTimeout(total=60)
 _SNAPSHOT_TIMEOUT = aiohttp.ClientTimeout(total=15)
+
+_JPEG_MAGIC = b"\xff\xd8"
+_PNG_MAGIC = b"\x89PNG"
 
 
 class FalconError(Exception):
@@ -105,11 +110,12 @@ class FalconApi:
         *,
         body: dict[str, Any] | None = None,
         port: int | None = None,
+        timeout: aiohttp.ClientTimeout = _TIMEOUT,
     ) -> Any:
         url = f"http://{self.host}:{port or self.port}{path}"
         try:
             async with self._session.request(
-                method, url, json=body, timeout=_TIMEOUT
+                method, url, json=body, timeout=timeout
             ) as resp:
                 if resp.status in (404, 405, 501):
                     raise FalconNotSupportedError(f"{method} {path}: HTTP {resp.status}")
@@ -177,20 +183,20 @@ class FalconApi:
     # ---------------------------------------------------------------- Befehle
     async def start_job(self) -> None:
         """Den zuletzt hochgeladenen / am Gerät gewählten Job starten."""
-        await self._request("GET", PATH_START)
+        await self._request("GET", PATH_START, timeout=_COMMAND_TIMEOUT)
 
     async def stop_job(self) -> None:
-        await self._request("GET", PATH_STOP)
+        await self._request("GET", PATH_STOP, timeout=_COMMAND_TIMEOUT)
 
     async def frame(self) -> None:
         """Rahmen fahren (läuft ggf. in Schleife bis Stopp)."""
-        await self._request("GET", PATH_FRAME)
+        await self._request("GET", PATH_FRAME, timeout=_COMMAND_TIMEOUT)
 
     async def home(self) -> None:
-        await self._request("POST", PATH_HOME, body={})
+        await self._request("POST", PATH_HOME, body={}, timeout=_COMMAND_TIMEOUT)
 
     async def autofocus(self) -> None:
-        await self._request("GET", PATH_AUTOFOCUS)
+        await self._request("GET", PATH_AUTOFOCUS, timeout=_COMMAND_TIMEOUT)
 
     async def set_assist_light(self, on: bool) -> None:
         """Roter Positionslaser (Assist Light 0)."""
@@ -202,12 +208,23 @@ class FalconApi:
         await self._request("POST", PATH_LIGHT, body={"dutyCycle": duty_cycle})
 
     async def get_snapshot(self) -> bytes:
-        """Einzelbild der Innenraumkamera."""
+        """Einzelbild der Innenraumkamera (JPEG/PNG).
+
+        Wenn das Gerät statt eines Bildes JSON liefert (z. B. errorcode -1
+        beim Falcon T1), wird ein Fehler ausgelöst statt Müll weiterzugeben.
+        """
         url = f"http://{self.host}:{self.camera_port}{PATH_SNAPSHOT}"
         try:
             async with self._session.get(url, timeout=_SNAPSHOT_TIMEOUT) as resp:
                 if resp.status >= 400:
                     raise FalconCommandError(f"Kamera: HTTP {resp.status}")
-                return await resp.read()
-        except (TimeoutError, aiohttp.ClientError) as err:
-            raise FalconConnectionError(f"{url}: {err}") from err
+                data = await resp.read()
+        except TimeoutError as err:
+            raise FalconConnectionError(f"{url}: Zeitüberschreitung") from err
+        except aiohttp.ClientError as err:
+            raise FalconConnectionError(f"{url}: {type(err).__name__}: {err}") from err
+
+        if data.startswith(_JPEG_MAGIC) or data.startswith(_PNG_MAGIC):
+            return data
+        preview = data[:120].decode("utf-8", errors="replace")
+        raise FalconNotSupportedError(f"Kamera liefert kein Bild: {preview}")

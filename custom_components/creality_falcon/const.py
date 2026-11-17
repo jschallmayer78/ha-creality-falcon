@@ -41,7 +41,8 @@ STATE_PATH_CANDIDATES: Final = (
     "/device/getState",
 )
 
-# Bisher beobachtet: state 4 während eines Alarms. Weitere Codes sind
+# Am Falcon T1 verifiziert: /work/state, Code 2 im Leerlauf.
+# Laut LightBurn-Forum (A1C): Code 4 während eines Alarms. Weitere Codes sind
 # nicht dokumentiert und werden roh im Sensor "Zustandscode" angezeigt.
 STATE_CODE_ALARM: Final = 4
 

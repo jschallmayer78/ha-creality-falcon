@@ -123,3 +123,28 @@ async def test_estimated_end_from_rate(hass, aioclient_mock):
         end = dt_util.parse_datetime(hass.states.get("sensor.falcon_t1_estimated_end").state)
         # 10 % in 60 s -> 40 % Rest = 240 s
         assert abs((end - future).total_seconds() - 240) < 10
+
+
+async def test_snapshot_rejects_json(hass, aioclient_mock):
+    await _setup(hass, aioclient_mock, 0.0)
+    aioclient_mock.get(f"{B}/media/getCapturePhoto", text='{"errorcode":-1,"payload":{}}')
+    from homeassistant.components.camera import async_get_image
+    from homeassistant.exceptions import HomeAssistantError
+    cam = next(s.entity_id for s in hass.states.async_all() if s.entity_id.startswith("camera."))
+    with pytest.raises(HomeAssistantError):
+        await async_get_image(hass, cam)
+
+
+async def test_snapshot_jpeg(hass, aioclient_mock):
+    await _setup(hass, aioclient_mock, 0.0)
+    aioclient_mock.get(f"{B}/media/getCapturePhoto", content=b"\xff\xd8\xff\xe0fakejpeg")
+    from homeassistant.components.camera import async_get_image
+    cam = next(s.entity_id for s in hass.states.async_all() if s.entity_id.startswith("camera."))
+    img = await async_get_image(hass, cam)
+    assert img.content.startswith(b"\xff\xd8")
+
+
+async def test_progress_as_string(hass, aioclient_mock):
+    await _setup(hass, aioclient_mock, "0.00")
+    assert hass.states.get("sensor.falcon_t1_status").state == "bereit"
+    assert float(hass.states.get("sensor.falcon_t1_progress").state) == 0.0

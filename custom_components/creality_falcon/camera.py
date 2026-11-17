@@ -28,12 +28,19 @@ class FalconCamera(FalconEntity, Camera):
         FalconEntity.__init__(self, coordinator, "camera")
         Camera.__init__(self)
         self._last_image: bytes | None = None
+        self._warned = False
 
     async def async_camera_image(
         self, width: int | None = None, height: int | None = None
     ) -> bytes | None:
         try:
             self._last_image = await self.coordinator.api.get_snapshot()
+            self._warned = False
         except FalconError as err:
-            _LOGGER.debug("Kamerabild nicht abrufbar: %s", err)
+            if not self._warned:
+                _LOGGER.warning("Falcon-Kamerabild nicht abrufbar: %s", err)
+                self._warned = True
+            else:
+                _LOGGER.debug("Falcon-Kamerabild nicht abrufbar: %s", err)
+            return None
         return self._last_image

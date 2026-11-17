@@ -26,7 +26,7 @@ Danach: *Einstellungen → Geräte & Dienste → Integration hinzufügen → „
 | Job starten | Taste | **standardmäßig deaktiviert**, siehe Sicherheit |
 | Innenbeleuchtung | Licht (dimmbar) | `POST /device/setLight {"dutyCycle":0..100}`, Zustand wird angenommen |
 | Positionslaser | Schalter | `POST /device/assistLight {"switch":0/1}`, Zustand wird angenommen |
-| Innenraumkamera | Kamera | Snapshot `:8080/media/getCapturePhoto` |
+| Innenraumkamera | Kamera | Snapshot `:8080/media/getCapturePhoto` – **am T1 derzeit ohne Bild**, siehe unten |
 
 ### Events für Automationen
 
@@ -53,6 +53,13 @@ actions:
 ## Sicherheit
 
 Ein Laserjob sollte nur laufen, wenn jemand in der Nähe ist. Deshalb ist **„Job starten“ standardmäßig deaktiviert**. Wer die Taste trotzdem braucht, aktiviert sie bewusst unter Entität → Einstellungen. „Job stoppen“ ist immer aktiv, damit ein Job notfalls aus der Ferne abgebrochen werden kann.
+
+## Am Falcon T1 verifiziert (Firmware Stand 11/2026)
+
+- `GET /work/progress` → `{"errorcode":0,"payload":{"progress":"0.00"}}` (Text, 0..1)
+- `GET /work/state` → `{"errorcode":0,"payload":{"state":2}}` (2 = Leerlauf)
+- `GET /device/status` → Liste der Komponenten (Beeper, Light, LightBar, Fan, FieldlensNfc …)
+- `GET /media/getCapturePhoto` → `{"errorcode":-1,"payload":{}}`: Der T1 liefert hier kein Bild, anders als der A1 Pro. Wie Falcon Design Space das Kamerabild beim T1 abruft, ist noch offen. Die Kamera-Entität zeigt deshalb kein Bild und schreibt einmalig eine Warnung ins Log.
 
 ## Offene Punkte / Verifikation
 
