@@ -127,6 +127,7 @@ async def test_estimated_end_from_rate(hass, aioclient_mock):
 
 async def test_snapshot_rejects_json(hass, aioclient_mock):
     await _setup(hass, aioclient_mock, 0.0)
+    aioclient_mock.post(f"{B}/media/getCapturePhoto?from=falcon", text='{"errorcode":-1,"payload":{}}')
     aioclient_mock.get(f"{B}/media/getCapturePhoto", text='{"errorcode":-1,"payload":{}}')
     from homeassistant.components.camera import async_get_image
     from homeassistant.exceptions import HomeAssistantError
@@ -137,11 +138,24 @@ async def test_snapshot_rejects_json(hass, aioclient_mock):
 
 async def test_snapshot_jpeg(hass, aioclient_mock):
     await _setup(hass, aioclient_mock, 0.0)
-    aioclient_mock.get(f"{B}/media/getCapturePhoto", content=b"\xff\xd8\xff\xe0fakejpeg")
+    aioclient_mock.post(f"{B}/media/getCapturePhoto?from=falcon", content=b"\xff\xd8\xff\xe0fakejpeg")
     from homeassistant.components.camera import async_get_image
     cam = next(s.entity_id for s in hass.states.async_all() if s.entity_id.startswith("camera."))
     img = await async_get_image(hass, cam)
     assert img.content.startswith(b"\xff\xd8")
+    post = [c for c in aioclient_mock.mock_calls if c[0] == "POST" and "getCapturePhoto" in str(c[1])]
+    assert post and post[-1][2] == {"exposureValue": -1, "height": 1920, "width": 2560}
+
+
+async def test_snapshot_fallback_get(hass, aioclient_mock):
+    """A1 Pro: POST liefert Fehler, GET liefert Bild."""
+    await _setup(hass, aioclient_mock, 0.0)
+    aioclient_mock.post(f"{B}/media/getCapturePhoto?from=falcon", status=405)
+    aioclient_mock.get(f"{B}/media/getCapturePhoto", content=b"\xff\xd8a1pro")
+    from homeassistant.components.camera import async_get_image
+    cam = next(s.entity_id for s in hass.states.async_all() if s.entity_id.startswith("camera."))
+    img = await async_get_image(hass, cam)
+    assert img.content == b"\xff\xd8a1pro"
 
 
 async def test_progress_as_string(hass, aioclient_mock):

@@ -28,6 +28,8 @@ PATH_AUTOFOCUS: Final = "/work/probe"
 PATH_ASSIST_LIGHT: Final = "/device/assistLight"
 PATH_LIGHT: Final = "/device/setLight"
 PATH_SNAPSHOT: Final = "/media/getCapturePhoto"
+# Exakt so sendet Falcon Design Space die Anfrage an den T1 (Mitschnitt 11/2026)
+SNAPSHOT_BODY: Final = {"exposureValue": -1, "height": 1920, "width": 2560}
 
 # Der Pfad für den Gerätezustand ({"errorcode":0,"payload":{"state":4}})
 # ist öffentlich nicht dokumentiert. Die Integration probiert diese

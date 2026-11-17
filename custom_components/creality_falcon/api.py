@@ -23,6 +23,7 @@ from .const import (
     PATH_SNAPSHOT,
     PATH_START,
     PATH_STOP,
+    SNAPSHOT_BODY,
     STATE_PATH_CANDIDATES,
 )
 
@@ -31,7 +32,7 @@ _LOGGER = logging.getLogger(__name__)
 _TIMEOUT = aiohttp.ClientTimeout(total=8)
 # Befehle wie Autofokus/Referenzfahrt antworten erst nach der Bewegung
 _COMMAND_TIMEOUT = aiohttp.ClientTimeout(total=60)
-_SNAPSHOT_TIMEOUT = aiohttp.ClientTimeout(total=15)
+_SNAPSHOT_TIMEOUT = aiohttp.ClientTimeout(total=20)
 
 _JPEG_MAGIC = b"\xff\xd8"
 _PNG_MAGIC = b"\x89PNG"
@@ -93,6 +94,7 @@ class FalconApi:
         self.camera_port = camera_port or port
         self._state_path: str | None = None
         self._state_probed = False
+        self._snapshot_method: str | None = None
 
     @property
     def base_url(self) -> str:
@@ -208,23 +210,41 @@ class FalconApi:
         await self._request("POST", PATH_LIGHT, body={"dutyCycle": duty_cycle})
 
     async def get_snapshot(self) -> bytes:
-        """Einzelbild der Innenraumkamera (JPEG/PNG).
+        """Einzelbild der Innenraumkamera (JPEG).
 
-        Wenn das Gerät statt eines Bildes JSON liefert (z. B. errorcode -1
-        beim Falcon T1), wird ein Fehler ausgelöst statt Müll weiterzugeben.
+        Falcon T1 (per Mitschnitt von Falcon Design Space verifiziert):
+            POST /media/getCapturePhoto?from=falcon
+            {"exposureValue": -1, "height": 1920, "width": 2560}
+        Falcon A1 Pro: GET /media/getCapturePhoto (Fallback).
+        Liefert das Gerät JSON statt eines Bildes (z. B. errorcode -1),
+        wird ein Fehler ausgelöst statt Müll weiterzugeben.
         """
-        url = f"http://{self.host}:{self.camera_port}{PATH_SNAPSHOT}"
-        try:
-            async with self._session.get(url, timeout=_SNAPSHOT_TIMEOUT) as resp:
-                if resp.status >= 400:
-                    raise FalconCommandError(f"Kamera: HTTP {resp.status}")
-                data = await resp.read()
-        except TimeoutError as err:
-            raise FalconConnectionError(f"{url}: Zeitüberschreitung") from err
-        except aiohttp.ClientError as err:
-            raise FalconConnectionError(f"{url}: {type(err).__name__}: {err}") from err
+        base = f"http://{self.host}:{self.camera_port}{PATH_SNAPSHOT}"
+        attempts: list[tuple[str, str, dict[str, Any] | None]] = [
+            ("POST", f"{base}?from=falcon", SNAPSHOT_BODY),
+            ("GET", base, None),
+        ]
+        if self._snapshot_method == "GET":
+            attempts.reverse()
 
-        if data.startswith(_JPEG_MAGIC) or data.startswith(_PNG_MAGIC):
-            return data
-        preview = data[:120].decode("utf-8", errors="replace")
-        raise FalconNotSupportedError(f"Kamera liefert kein Bild: {preview}")
+        last_error = ""
+        for method, url, body in attempts:
+            try:
+                async with self._session.request(
+                    method, url, json=body, timeout=_SNAPSHOT_TIMEOUT
+                ) as resp:
+                    if resp.status >= 400:
+                        last_error = f"{method}: HTTP {resp.status}"
+                        continue
+                    data = await resp.read()
+            except TimeoutError as err:
+                raise FalconConnectionError(f"{url}: Zeitüberschreitung") from err
+            except aiohttp.ClientError as err:
+                raise FalconConnectionError(f"{url}: {type(err).__name__}: {err}") from err
+
+            if data.startswith(_JPEG_MAGIC) or data.startswith(_PNG_MAGIC):
+                self._snapshot_method = method
+                return data
+            last_error = f"{method}: " + data[:120].decode("utf-8", errors="replace")
+
+        raise FalconNotSupportedError(f"Kamera liefert kein Bild ({last_error})")

@@ -26,7 +26,7 @@ Danach: *Einstellungen → Geräte & Dienste → Integration hinzufügen → „
 | Job starten | Taste | **standardmäßig deaktiviert**, siehe Sicherheit |
 | Innenbeleuchtung | Licht (dimmbar) | `POST /device/setLight {"dutyCycle":0..100}`, Zustand wird angenommen |
 | Positionslaser | Schalter | `POST /device/assistLight {"switch":0/1}`, Zustand wird angenommen |
-| Innenraumkamera | Kamera | Snapshot `:8080/media/getCapturePhoto` – **am T1 derzeit ohne Bild**, siehe unten |
+| Innenraumkamera | Kamera | T1: `POST /media/getCapturePhoto?from=falcon` mit Bildgröße, 2560×1920 JPEG; A1 Pro: `GET` als Fallback |
 
 ### Events für Automationen
 
@@ -59,7 +59,12 @@ Ein Laserjob sollte nur laufen, wenn jemand in der Nähe ist. Deshalb ist **„J
 - `GET /work/progress` → `{"errorcode":0,"payload":{"progress":"0.00"}}` (Text, 0..1)
 - `GET /work/state` → `{"errorcode":0,"payload":{"state":2}}` (2 = Leerlauf)
 - `GET /device/status` → Liste der Komponenten (Beeper, Light, LightBar, Fan, FieldlensNfc …)
-- `GET /media/getCapturePhoto` → `{"errorcode":-1,"payload":{}}`: Der T1 liefert hier kein Bild, anders als der A1 Pro. Wie Falcon Design Space das Kamerabild beim T1 abruft, ist noch offen. Die Kamera-Entität zeigt deshalb kein Bild und schreibt einmalig eine Warnung ins Log.
+- `GET /media/getCapturePhoto` → `{"errorcode":-1,"payload":{}}` (A1-Pro-Variante funktioniert am T1 nicht)
+- `POST /media/getCapturePhoto?from=falcon` mit `{"exposureValue":-1,"height":1920,"width":2560}` → JPEG, 2560×1920, ca. 350 KB (so ruft Falcon Design Space das Bild ab, per Mitschnitt verifiziert)
+- `GET /work/probe?from=falcon` (Autofokus) → `{"errorcode":0,"payload":{"materialHight":6.31,"result":0}}`
+- `GET /work/mpos?from=falcon` → `{"errorcode":0,"payload":{"mpos":"<87.5,87.5,-140.19,0.0>"}}`
+- UDP-Broadcast auf Port 12345: `{"devName":"cv_laser_60","ip":"…","port":"8080"}` (für eine spätere automatische Erkennung)
+- TCP 11111: Push-Kanal mit Statusmeldungen (`{"module":"printer","curState":512}`, `{"module":"alarm",…}`); der Verbindungsaufbau ist verschlüsselt und noch nicht nachgebaut
 
 ## Offene Punkte / Verifikation
 
