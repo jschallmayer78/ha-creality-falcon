@@ -1,0 +1,101 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Creality Falcon",
+        "description": "IP address of the laser (Settings → Network on the device). The API port is auto-detected (8080/80).",
+        "data": {
+          "host": "Host / IP",
+          "name": "Name",
+          "port": "API port",
+          "camera_port": "Camera port"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Cannot connect. Is the laser powered on and on the network?"
+    },
+    "abort": {
+      "already_configured": "This laser is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "scan_interval": "Polling interval (seconds)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "status": {
+        "name": "Status",
+        "state": {
+          "bereit": "Ready",
+          "laeuft": "Running",
+          "alarm": "Alarm"
+        }
+      },
+      "progress": {
+        "name": "Progress"
+      },
+      "job_started": {
+        "name": "Job started"
+      },
+      "estimated_end": {
+        "name": "Estimated end"
+      },
+      "last_job_finished": {
+        "name": "Last job finished"
+      },
+      "last_job_duration": {
+        "name": "Last job duration"
+      },
+      "state_code": {
+        "name": "State code"
+      }
+    },
+    "binary_sensor": {
+      "running": {
+        "name": "Job running"
+      },
+      "alarm": {
+        "name": "Alarm"
+      }
+    },
+    "button": {
+      "start": {
+        "name": "Start job"
+      },
+      "stop": {
+        "name": "Stop job"
+      },
+      "frame": {
+        "name": "Frame"
+      },
+      "home": {
+        "name": "Home"
+      },
+      "autofocus": {
+        "name": "Autofocus"
+      }
+    },
+    "light": {
+      "light": {
+        "name": "Interior light"
+      }
+    },
+    "switch": {
+      "pointer": {
+        "name": "Red pointer"
+      }
+    },
+    "camera": {
+      "camera": {
+        "name": "Interior camera"
+      }
+    }
+  }
+}

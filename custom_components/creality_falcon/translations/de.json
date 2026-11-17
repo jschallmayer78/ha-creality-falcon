@@ -1,0 +1,101 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Creality Falcon",
+        "description": "IP-Adresse des Lasers (am Gerät unter Einstellungen → Netzwerk). Der API-Port wird automatisch erkannt (8080/80).",
+        "data": {
+          "host": "Host / IP",
+          "name": "Name",
+          "port": "API-Port",
+          "camera_port": "Kamera-Port"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Keine Verbindung. Ist der Laser eingeschaltet und im WLAN/LAN?"
+    },
+    "abort": {
+      "already_configured": "Dieser Laser ist bereits eingerichtet."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "scan_interval": "Abfrageintervall (Sekunden)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "status": {
+        "name": "Status",
+        "state": {
+          "bereit": "Bereit",
+          "laeuft": "Läuft",
+          "alarm": "Alarm"
+        }
+      },
+      "progress": {
+        "name": "Fortschritt"
+      },
+      "job_started": {
+        "name": "Job gestartet"
+      },
+      "estimated_end": {
+        "name": "Voraussichtliches Ende"
+      },
+      "last_job_finished": {
+        "name": "Letzter Job beendet"
+      },
+      "last_job_duration": {
+        "name": "Dauer letzter Job"
+      },
+      "state_code": {
+        "name": "Zustandscode"
+      }
+    },
+    "binary_sensor": {
+      "running": {
+        "name": "Job läuft"
+      },
+      "alarm": {
+        "name": "Alarm"
+      }
+    },
+    "button": {
+      "start": {
+        "name": "Job starten"
+      },
+      "stop": {
+        "name": "Job stoppen"
+      },
+      "frame": {
+        "name": "Rahmen fahren"
+      },
+      "home": {
+        "name": "Referenzfahrt"
+      },
+      "autofocus": {
+        "name": "Autofokus"
+      }
+    },
+    "light": {
+      "light": {
+        "name": "Innenbeleuchtung"
+      }
+    },
+    "switch": {
+      "pointer": {
+        "name": "Positionslaser"
+      }
+    },
+    "camera": {
+      "camera": {
+        "name": "Innenraumkamera"
+      }
+    }
+  }
+}
